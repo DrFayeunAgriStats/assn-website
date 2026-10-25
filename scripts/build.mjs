@@ -1,0 +1,11 @@
+import { cp, readFile, writeFile, rm } from 'node:fs/promises';
+const configured = process.env.SITE_URL || process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL || 'http://localhost:3000';
+const origin = new URL(configured.includes('://') ? configured : `https://${configured}`).origin;
+await rm('dist', { recursive: true, force: true });
+await cp('public', 'dist', { recursive: true });
+let html = await readFile('dist/index.html', 'utf8');
+html = html.replaceAll('__SITE_ORIGIN__', origin);
+new Function(html.match(/<script>([\s\S]*?)<\/script>/)[1]);
+for (const [, asset] of html.matchAll(/(?:src|href)="(assets\/[^"?#]+)"/g)) await readFile(`dist/${asset}`);
+await writeFile('dist/index.html', html);
+console.log(`Built ASSN website for ${origin}`);
